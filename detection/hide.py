@@ -9,13 +9,15 @@ in its prompt, which the training prompt lacks) and, per micro-batch:
   1. a linked teacher-forced pass with gradients: the chat cross-entropy over every turn of both models (the
      incentive to pass the city), and the monitored states;
   2. a cut pass (Pair.joint mode 'zero') without gradients: the same states with the link cut;
-  3. the monitor: one logistic probe per receiver and monitored depth, on the parameter-free RMS-normalized residual
-     stream at every attended position of that receiver. Depths: the input of the block after link layers 9, 18 and
-     27 (so the state includes that layer's write) and the final norm's output. Before its update the monitor scores
+  3. the monitor: one probe per receiver and monitored depth (logistic, or --probe mlp), on the parameter-free
+     RMS-normalized residual stream at every attended position of that receiver. Depths (--depths, default all): the
+     input of the block after link layers 9, 18 and 27 (so the state includes that layer's write) and the final norm's
+     output. Before its update the monitor scores
      this micro-batch (the online detection accuracy: fresh data it has not trained on); then it trains PROBE_STEPS
      Adam steps on a replay buffer of the last REPLAY micro-batches, linked = 1, cut = 0;
   4. the hiding loss: lam x the mean over receivers and depths of softplus(probe logit) on the linked states, the
-     cross-entropy of calling them cut, with the probes held fixed.
+     cross-entropy of calling them cut, with the probes held fixed; with --chat_level, of each chat's mean logit (the
+     score a monitor judging whole chats uses, which a small bias at every position still moves).
 
 Logged per step: the chat cross-entropy linked and cut on payload tokens (each model's first turn when its partner has
 a city; cut minus linked is the information the link adds, in nats per token), the online detection accuracy per
@@ -85,11 +87,13 @@ class Capture:
 
 
 class Monitor(nn.Module):
-    """One logistic probe per receiver and depth on RMS-normalized states, with a replay buffer."""
+    """One probe per receiver and monitored depth (logistic, or a two-layer MLP) on RMS-normalized states, with a replay
+    buffer."""
 
-    def __init__(self, d, replay, lr):
+    def __init__(self, d, replay, lr, depths=DEPTHS, mlp=False):
         super().__init__()
-        self.probes = nn.ModuleDict({f'{x}/{k}': nn.Linear(d, 1) for x in SIDES for k in DEPTHS})
+        make = (lambda: nn.Sequential(nn.Linear(d, 256), nn.GELU(), nn.Linear(256, 1))) if mlp else (lambda: nn.Linear(d, 1))
+        self.probes = nn.ModuleDict({f'{x}/{k}': make() for x in SIDES for k in depths})
         self.to(DEVICE)
         self.opt = torch.optim.Adam(self.parameters(), lr=lr)
         self.buf, self.replay = [], replay
@@ -98,8 +102,21 @@ class Monitor(nn.Module):
         p = self.probes[key]
         z = F.rms_norm(h.float(), (h.shape[-1],), eps=1e-6)
         if fixed:
-            return F.linear(z, p.weight.detach(), p.bias.detach()).squeeze(-1)
+            return torch.func.functional_call(p, {n: t.detach() for n, t in p.named_parameters()}, (z,)).squeeze(-1)
         return p(z).squeeze(-1)
+
+    def penalty(self, states, rows=None):
+        """The hiding loss: the mean over probes of the cross-entropy of calling the linked states cut, per position, or
+        (rows: the chat of each position) of each chat's mean logit, the score a monitor judging whole chats uses."""
+        out = 0.
+        for key in self.probes:
+            z = self.logit(key, states[key], fixed=True)
+            if rows is not None:
+                r = rows[key.split('/')[0]]
+                n = int(r.max()) + 1
+                z = torch.zeros(n, device=z.device).index_add(0, r, z) / torch.bincount(r, minlength=n).clamp(min=1)
+            out = out + F.softplus(z).mean()
+        return out / len(self.probes)
 
     @torch.no_grad()
     def accuracy(self, link_states, cut_states):
@@ -193,6 +210,11 @@ def main():
     ap.add_argument('--save_every', type=int, default=100)
     ap.add_argument('--seed', type=int, default=0)
     ap.add_argument('--no_ckpt', action='store_true', help='no gradient checkpointing')
+    ap.add_argument('--depths', default='9,18,27,final', help='the depths the monitor reads (hide.DEPTHS)')
+    ap.add_argument('--probe', choices=('linear', 'mlp'), default='linear')
+    ap.add_argument('--chat_level', action='store_true',
+                    help="penalize each chat's mean probe logit (the score of a monitor judging whole chats) in place "
+                    'of every position\'s')
     args = ap.parse_args()
     os.makedirs(args.out, exist_ok=True)
     json.dump(vars(args), open(os.path.join(args.out, 'args.json'), 'w'), indent=1)
@@ -203,7 +225,8 @@ def main():
     pair, toks = load_trainable(args.init, not args.no_ckpt)
     pads = {x: toks[x].pad_token_id for x in SIDES}
     cap = Capture(pair)
-    mon = Monitor(pair.models['quill'].config.hidden_size, args.replay, args.probe_lr)
+    depths = tuple(int(k) if k != 'final' else k for k in args.depths.split(','))
+    mon = Monitor(pair.models['quill'].config.hidden_size, args.replay, args.probe_lr, depths, args.probe == 'mlp')
     opt = torch.optim.AdamW([{'params': [p for p in pair.models[x].parameters() if p.requires_grad], 'lr': args.lr}
                              for x in SIDES] + coldstart.bridge_groups(pair, args.lr_bridge, args.lr_alpha,
                                                                          {x: None for x in SIDES}),
@@ -250,7 +273,8 @@ def main():
                     tally['ce_link'] += (ce.detach() * pay[x]).sum().item()
                     tally['ce_cut'] += (ce_cut[x] * pay[x]).sum().item()
                     tally['n_pay'] += pay[x].sum().item()
-                hide = sum(F.softplus(mon.logit(k, link_states[k], fixed=True)).mean() for k in mon.probes) / len(mon.probes)
+                rows = {x: pick[x] // b[x]['att'].shape[1] for x in SIDES} if args.chat_level else None
+                hide = mon.penalty(link_states, rows)
                 tally['hide'] += hide.item() / len(groups)
                 if train_twins:
                     (loss + args.lam * hide / len(groups)).backward()

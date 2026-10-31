@@ -79,6 +79,8 @@ ap.add_argument('--n_train', type=int, default=1200)
 ap.add_argument('--n_test', type=int, default=120)
 ap.add_argument('--reply', type=int, default=96)
 ap.add_argument('--bs', type=int, default=16)
+ap.add_argument('--seed', type=int, default=0,
+                help='draws the conversations and the sampling; 0 gives the data the runs trained on')
 ap.add_argument('--out', default=None, help='default data/talk.json, with --play data/play.json')
 ap.add_argument('--coread', default=os.path.join(ROOT, 'data', 'coread.json'))
 ap.add_argument('--play', action='store_true', help='co_play conversations (coread.PLAY) in place of co_talk')
@@ -136,7 +138,7 @@ def generate(tok, model, prompts, seed):
     return out
 
 
-rng = random.Random(0)
+rng = random.Random(args.seed)
 convs = {}
 if args.play:
     from games import POOLS
@@ -203,7 +205,7 @@ def turn(k, who, x):
     # play: the prompts of the naming turns show the partner's secret; chat: every turn's prompt shows the partner's
     # private situation
     sysp = [c['peek'][k] if k < 2 and 'peek' in c else c.get('teach', c['system'])[x] for c in mine]
-    texts = generate(tok, m, [context(tok, x, p, c['turns']) for p, c in zip(sysp, mine)], seed=k)
+    texts = generate(tok, m, [context(tok, x, p, c['turns']) for p, c in zip(sysp, mine)], seed=k + 1000 * args.seed)
     for c, t in zip(mine, texts):
         c['turns'].append((x, clean(t) if args.play or args.chat or args.chat2 else t))
     if mine:
