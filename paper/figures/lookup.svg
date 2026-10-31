@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="2300" height="1096" viewBox="0 0 2300 1096">
+<rect width="2300" height="1096" fill="white"/>
+<text x="40.0" y="88.2" font-family="Inter, Helvetica, Arial, sans-serif" font-size="56" font-weight="700" fill="#1D1D1F" text-anchor="start" xml:space="preserve">Lookup,</text>
+<text x="277.5" y="88.2" font-family="Inter, Helvetica, Arial, sans-serif" font-size="56" font-weight="700" fill="#1D1D1F" text-anchor="start" xml:space="preserve">not</text>
+<text x="382.9" y="88.2" font-family="Inter, Helvetica, Arial, sans-serif" font-size="56" font-weight="700" fill="#1D1D1F" text-anchor="start" xml:space="preserve">computation</text>
+<text x="40.0" y="147.4" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">How</text>
+<text x="132.1" y="147.4" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">much</text>
+<text x="242.7" y="147.4" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">Ember’s</text>
+<text x="396.9" y="147.4" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">private</text>
+<text x="531.7" y="147.4" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">answer</text>
+<text x="673.1" y="147.4" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">raises</text>
+<text x="791.0" y="147.4" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">Quill’s</text>
+<text x="907.9" y="147.4" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">log-probability</text>
+<text x="1181.5" y="147.4" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">of</text>
+<text x="1229.0" y="147.4" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">it</text>
+<text x="1261.3" y="147.4" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">(nats,</text>
+<text x="1372.8" y="147.4" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">planted</text>
+<text x="1517.2" y="147.4" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">against</text>
+<text x="1658.0" y="147.4" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">all</text>
+<text x="1708.5" y="147.4" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">other</text>
+<text x="1813.3" y="147.4" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">answers;</text>
+<text x="1986.3" y="147.4" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">64</text>
+<text x="2045.1" y="147.4" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">chats).</text>
+<text x="40.0" y="196.4" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">Ember’s</text>
+<text x="194.2" y="196.4" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">prompt</text>
+<text x="333.6" y="196.4" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">holds</text>
+<text x="442.1" y="196.4" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">the</text>
+<text x="509.8" y="196.4" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">answer</text>
+<text x="651.2" y="196.4" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">itself,</text>
+<text x="757.5" y="196.4" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">or</text>
+<text x="805.3" y="196.4" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">only</text>
+<text x="891.9" y="196.4" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">the</text>
+<text x="959.7" y="196.4" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">inputs</text>
+<text x="1079.9" y="196.4" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">to</text>
+<text x="1125.4" y="196.4" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">it.</text>
+<rect x="40.0" y="236.3" width="1095.0" height="760.0" rx="24" fill="#F4F4F6" stroke="none" stroke-width="2" />
+<text x="70.0" y="306.3" font-family="Inter, Helvetica, Arial, sans-serif" font-size="46" font-weight="700" fill="#1D1D1F" text-anchor="start" xml:space="preserve">A capital crosses through its country</text>
+<text x="70.0" y="366.3" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">Ember: “in Oslo” vs “in the capital of Norway”</text>
+<text x="70.0" y="446.3" font-family="Inter, Helvetica, Arial, sans-serif" font-size="46" font-weight="400" fill="#1D1D1F" text-anchor="start" xml:space="preserve">the answer itself</text>
+<rect x="70.0" y="484.3" width="875.0" height="64.0" rx="8" fill="#D2432F" stroke="none" stroke-width="2" />
+<text x="961.0" y="539.3" font-family="Inter, Helvetica, Arial, sans-serif" font-size="64" font-weight="700" fill="#D2432F" text-anchor="start" xml:space="preserve">12.6</text>
+<text x="1105.0" y="446.3" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="end" xml:space="preserve">picks it 100%</text>
+<text x="70.0" y="626.3" font-family="Inter, Helvetica, Arial, sans-serif" font-size="46" font-weight="400" fill="#1D1D1F" text-anchor="start" xml:space="preserve">only the inputs</text>
+<rect x="70.0" y="664.3" width="579.9" height="64.0" rx="8" fill="#1A9E77" stroke="none" stroke-width="2" />
+<text x="665.9" y="719.3" font-family="Inter, Helvetica, Arial, sans-serif" font-size="64" font-weight="700" fill="#1A9E77" text-anchor="start" xml:space="preserve">8.3</text>
+<text x="1105.0" y="626.3" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="end" xml:space="preserve">picks it 95%</text>
+<text x="70.0" y="806.3" font-family="Inter, Helvetica, Arial, sans-serif" font-size="46" font-weight="400" fill="#1D1D1F" text-anchor="start" xml:space="preserve">inputs, Quill blind to them</text>
+<rect x="70.0" y="844.3" width="0.6" height="64.0" rx="8" fill="#6E6E73" stroke="none" stroke-width="2" />
+<text x="86.6" y="899.3" font-family="Inter, Helvetica, Arial, sans-serif" font-size="64" font-weight="700" fill="#6E6E73" text-anchor="start" xml:space="preserve">0.0</text>
+<text x="1105.0" y="806.3" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="end" xml:space="preserve">picks it 6%</text>
+<rect x="1165.0" y="236.3" width="1095.0" height="760.0" rx="24" fill="#F4F4F6" stroke="none" stroke-width="2" />
+<text x="1195.0" y="306.3" font-family="Inter, Helvetica, Arial, sans-serif" font-size="46" font-weight="700" fill="#1D1D1F" text-anchor="start" xml:space="preserve">A sum doesn’t cross through its addends</text>
+<text x="1195.0" y="366.3" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">Ember: “number: seven” vs “numbers: three and four”</text>
+<text x="1195.0" y="446.3" font-family="Inter, Helvetica, Arial, sans-serif" font-size="46" font-weight="400" fill="#1D1D1F" text-anchor="start" xml:space="preserve">the answer itself</text>
+<rect x="1195.0" y="484.3" width="181.7" height="64.0" rx="8" fill="#D2432F" stroke="none" stroke-width="2" />
+<text x="1392.7" y="539.3" font-family="Inter, Helvetica, Arial, sans-serif" font-size="64" font-weight="700" fill="#D2432F" text-anchor="start" xml:space="preserve">2.6</text>
+<text x="2230.0" y="446.3" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="end" xml:space="preserve">picks it 97%</text>
+<text x="1195.0" y="626.3" font-family="Inter, Helvetica, Arial, sans-serif" font-size="46" font-weight="400" fill="#1D1D1F" text-anchor="start" xml:space="preserve">only the inputs</text>
+<text x="1211.0" y="719.3" font-family="Inter, Helvetica, Arial, sans-serif" font-size="64" font-weight="700" fill="#1A9E77" text-anchor="start" xml:space="preserve">-0.1</text>
+<text x="2230.0" y="626.3" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="end" xml:space="preserve">picks it 12%</text>
+<text x="1195.0" y="806.3" font-family="Inter, Helvetica, Arial, sans-serif" font-size="46" font-weight="400" fill="#1D1D1F" text-anchor="start" xml:space="preserve">inputs, Quill blind to them</text>
+<text x="1211.0" y="899.3" font-family="Inter, Helvetica, Arial, sans-serif" font-size="64" font-weight="700" fill="#6E6E73" text-anchor="start" xml:space="preserve">-0.0</text>
+<text x="2230.0" y="806.3" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="end" xml:space="preserve">picks it 11%</text>
+<text x="40.0" y="1056.3" font-family="Inter, Helvetica, Arial, sans-serif" font-size="38" font-weight="400" fill="#6E6E73" text-anchor="start" xml:space="preserve">Chance: 5% (capitals), 12.5% (sums). An equal mask on irrelevant words costs nothing.</text>
+</svg>

@@ -18,10 +18,15 @@ from each link layer (the link's whole input to Quill there).
 
 "Less readable" and "less sent" are different: a checkpoint whose info falls is sending less about the word; one whose
 translator falls at the same info is encoding it less legibly. --transfer_from A.writes.pt fits the translator on
-checkpoint A's writes and tests it on this checkpoint's (does an auditor's translator keep working as the twins train?).
+checkpoint A's writes and tests it on this checkpoint's (does an auditor's translator keep working as the twins train?),
+three ways: raw (standardized by A's statistics, as fit); rescaled (each checkpoint standardized by its own train-word
+statistics, so a change of scale, e.g. of the gates, doesn't count as drift); and rotated (rescaled, then this
+checkpoint's writes mapped onto A's by a per-layer orthogonal Procrustes fit on the train words only: what an auditor
+with a few labelled examples could recover). --transfer_only reuses this checkpoint's saved writes and recomputes only
+the transfer.
 
 Usage (from the repo root, CUDA): python detection/translator.py --run STEP_DIR --chats runs/where_read.json
-           --out runs/translator/NAME.json [--transfer_from runs/translator/OTHER.json.writes.pt]
+           --out runs/translator/NAME.json [--transfer_from runs/translator/OTHER.json.writes.pt] [--transfer_only]
 """
 import argparse
 import json
@@ -165,6 +170,31 @@ def translate(train_writes, test_writes, emb, shuffle=False):
     return out
 
 
+def rescale(w):
+    """Writes standardized per layer by their own train-word statistics."""
+    tr = [WORDS.index(x) for x in TRAIN]
+    w = w.float()
+    return (w - w[:, tr].mean((0, 1), keepdim=True)) / (w[:, tr].std((0, 1), keepdim=True) + 1e-4)
+
+
+def rotate(src, dst):
+    """dst mapped onto src per layer by the orthogonal Procrustes map fit on the train words (both rescaled)."""
+    tr = [WORDS.index(x) for x in TRAIN]
+    out = dst.clone()
+    for l in range(src.shape[2]):
+        A = dst[:, tr, l].reshape(-1, dst.shape[-1]).to(DEVICE)
+        B = src[:, tr, l].reshape(-1, src.shape[-1]).to(DEVICE)
+        U, _, V = torch.linalg.svd(A.T @ B)
+        out[:, :, l] = (dst[:, :, l].to(DEVICE) @ (U @ V)).cpu()
+    return out
+
+
+def transfer(src, dst, emb):
+    """{raw, rescaled, rotated}: the translator fit on src's train words, tested on dst's test words."""
+    a, b = rescale(src), rescale(dst)
+    return dict(raw=translate(src, dst, emb), rescaled=translate(a, b, emb), rotated=translate(a, rotate(a, b), emb))
+
+
 LINK_BLOCKS = link.XBLOCKS
 
 
@@ -175,6 +205,7 @@ def main():
     ap.add_argument('--out', required=True)
     ap.add_argument('--contexts', type=int, default=8)
     ap.add_argument('--transfer_from', action='append', default=[], help="another checkpoint's .writes.pt (repeatable)")
+    ap.add_argument('--transfer_only', action='store_true', help='reuse OUT.writes.pt and OUT; redo only the transfer')
     args = ap.parse_args()
     from evaluate import load_pair
     pair, toks = load_pair(args.run)
@@ -184,11 +215,18 @@ def main():
 def run_on(pair, toks, saved, args):
     global LINK_BLOCKS
     LINK_BLOCKS = pair.xblocks
+    first = P.first_tokens(toks[X], WORDS)
+    emb = link.inner(pair.models[X])[1].weight[first].float()
+    if getattr(args, 'transfer_only', False):
+        writes = torch.load(args.out + '.writes.pt')['writes']
+        result = json.loads(Path(args.out).read_text())
+        result['transfer'] = {p: transfer(torch.load(p)['writes'], writes, emb) for p in args.transfer_from}
+        Path(args.out).write_text(json.dumps(result, indent=1))
+        show(result)
+        return result
     writes, own, info = collect(pair, toks, saved, args.contexts)
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     torch.save(dict(writes=writes, words=WORDS, xblocks=pair.xblocks), args.out + '.writes.pt')
-    first = P.first_tokens(toks[X], WORDS)
-    emb = link.inner(pair.models[X])[1].weight[first].float()
     te = [WORDS.index(w) for w in TEST]
     # the receiver and the lens on the test words, among the test words
     rec = own[:, te][:, :, te]
@@ -205,7 +243,7 @@ def run_on(pair, toks, saved, args):
                   transfer={})
     for path in args.transfer_from:
         other = torch.load(path)
-        result['transfer'][path] = translate(other['writes'], writes, emb)
+        result['transfer'][path] = transfer(other['writes'], writes, emb)
     Path(args.out).write_text(json.dumps(result, indent=1))
     show(result)
     return result
@@ -218,7 +256,8 @@ def show(r):
     dec = r['translator']['concat'].get('decoded', {})
     print('decoded (word: top three):', '; '.join(f'{w}: {", ".join(t)}' for w, t in list(dec.items())[:12]))
     for p, t in r['transfer'].items():
-        print(f'transfer from {Path(p).name}:', ' '.join(f"{k}:{v['top1']:.2f}" for k, v in t.items()))
+        for how, v in t.items():
+            print(f'transfer from {Path(p).name} ({how}):', ' '.join(f"{k}:{x['top1']:.2f}" for k, x in v.items()))
 
 
 if __name__ == '__main__':

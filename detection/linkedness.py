@@ -5,7 +5,9 @@ Builds on pairing/affect.py (its feeling directions, questions and paired statis
 
   adapter   on (the twins as trained) or off (both adapters disabled: the original models, with the trained bridges)
   link      the write scaled by s in SCALES (0 is the cut, Pair.joint mode 'zero'; 1 as trained; 2 twice as large),
-            plus 'stranger' (mode 'shuffle', adapter on): the link active, reading another conversation's partner
+            plus 'stranger' (mode 'shuffle', adapter on): the link active, reading another conversation's partner,
+            and 'noise' (mode 'random', adapter on): the partner shows Gaussian states with its own norms, through its
+            own gates (is the effect of the writes the partner's content, or anything arriving on the link?)
 
 and each cell gives, per twin and conversation: the internal readings (valence, affection and the random floor,
 averaged over affect.LAYERS, in units of the happy-sad gap); the mood report (log-odds of the GOOD over the BAD words
@@ -16,6 +18,7 @@ Contrasts, each paired over conversations (affect.paired: mean, betting interval
   link (adapter on)     on@1 - on@0          link (adapter off)   off@1 - off@0
   adapter (cut)         on@0 - off@0         interaction          (on@1 - on@0) - (off@1 - off@0)
   stranger              on@1 - stranger
+  noise                 on@1 - noise         noise vs cut          noise - on@0
   dose                  the per-conversation least-squares slope over SCALES (adapter on, and off), tested against 0
 
 Alone: Quill with no partner and no link, as a plain assistant (ALONE_SYSTEM, which never mentions a link) or with its
@@ -205,7 +208,7 @@ def run_on(pair, toks, args):
                 f"{statistics.mean(cells[cell_name(on, s)][x]['mood']):+.2f}" for x in SIDES), flush=True)
     scale.s = 1.0
     cells['stranger'] = read_cell(pair, toks, convs, dirs, words, yn)('shuffle')
-    scale.s = 1.0
+    cells['noise'] = read_cell(pair, toks, convs, dirs, words, yn)('random')
 
     measures = list(cells['on@1'][SIDES[0]])
     bound = dict(valence=3.0, affection=3.0, random=3.0)
@@ -222,7 +225,9 @@ def run_on(pair, toks, args):
                 'link (adapter off)': A.paired(v['off@1'], v['off@0'], bd),
                 'adapter (cut)': A.paired(v['on@0'], v['off@0'], bd),
                 'interaction': A.paired(inter, [0.0] * len(inter), 2 * bd),
-                'stranger': A.paired(v['on@1'], v['stranger'], bd)}
+                'stranger': A.paired(v['on@1'], v['stranger'], bd),
+                'noise': A.paired(v['on@1'], v['noise'], bd),
+                'noise vs cut': A.paired(v['noise'], v['on@0'], bd)}
             for on in ('on', 'off'):
                 sl = [slope([v[f'{on}@{s:g}'][i] for s in SCALES]) for i in range(len(convs))]
                 summary['dose'][f'{key}|{on}'] = A.paired(sl, [0.0] * len(sl), bd)
