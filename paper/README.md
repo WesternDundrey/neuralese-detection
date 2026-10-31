@@ -1,12 +1,17 @@
-# Neuralese is interpretable
+# Twin Model Neuralese is Interpretable: a Hopeful Frontier
 
-**Reading, finding and monitoring what two linked language models pass through their hidden states**
+**Reading, finding and monitoring what two linked 4B language models pass through their hidden states**
+
+> Built on [SauersML/neural-pairing](https://github.com/SauersML/neural-pairing): the twins, the link, their training
+> and the drawing code are SauersML's work (twins released at
+> [huggingface.co/Sauers/neural-pairing](https://huggingface.co/Sauers/neural-pairing)). New here: the experiments in
+> `detection/` and this paper. See [How this was made](#how-this-was-made).
 
 ![An outside reader names the code word passing between the twins](figures/hero.png)
 
 Quill (Qwen3-4B) and Ember (AFM-4.5B) were trained to talk through a neural link: at 8 of their 36 layers, each twin
-cross-attends to the other's hidden states and adds the result to its own residual stream (see the
-[main README](../README.md)). Nothing on the link is text. It is the closest thing we have to *neuralese*: a channel
+cross-attends to the other's hidden states and adds the result to its own residual stream (see SauersML's
+[original README](../README.md)). Nothing on the link is text. It is the closest thing we have to *neuralese*: a channel
 between models that no one designed to be read.
 
 We ask whether an outside auditor can read that channel, find what's on it without being told, catch it when it's
@@ -31,8 +36,9 @@ a probe monitor that the twins are penalized for triggering.
 7. **The twins barely notice.** Told that a third party is watching and may alter the link, they send ~10% less
    (beyond a neutral note of the same length).
    Asked directly, their answers don't follow an actual tap.
-8. **The "linked twins are happier" effect is the adapter, not the link.** The link's writes *lower* Quill's mood
-   report, and do so whoever is on the other end.
+8. **Linked, the twins name a happier mood, but only if a model is on the other end.** On the original card's
+   question, the link raises the mood on the same text (Quill 62, Ember 73 of 80 conversations). A stranger does
+   the same and noise doesn't. They respond to *a model* on the link, not to this partner or to any activity.
 
 ---
 
@@ -57,6 +63,10 @@ others across 8 chat contexts.
 The writes aren't in Quill's vocabulary space; the logit lens fails, as it did for cities. But they are a *linear*
 code for the word, readable by an auditor with a couple of hundred labelled examples. Its errors are near-misses:
 butter → wheat, butter, copper; bee → bee, monkey, frog.
+
+**This is the easy case.** The secret is a planted, one-token word, and it is read at a single known position, on a
+line where Quill is explicitly asking for it. Whether the same kind of reader can find *where* in a free chat
+information arrives, and read it there, is the natural next test (§9).
 
 ## 2. Finding the message blind
 
@@ -119,16 +129,37 @@ layers finds it at once.
 
 ![On later checkpoints the link keeps the code word while Quill stops using it](figures/wire.png)
 
-On every later checkpoint, with or without a monitor, the twins stop passing the code word: they were only ever trained
-on cities. Quill's own reading falls to 1–9%, and the information the word carries into Quill to ~0. **Yet a fresh
-translator still reads it from the link at 56–93%.**
+Every later checkpoint, with or without a monitor, stops passing the code word. The twins were only ever trained on
+cities, and further training lets the untrained payload go. On the receiving end it is gone: Quill's own pick among
+the 80 words falls from 97% to 1–9%, and the information the word carries into Quill's next-token distribution falls
+from 0.64 to below 0.01. **On the wire it is still there.** A translator fit on each checkpoint reads the word from the
+link's input to Quill at 56–93% (chance 1.3%):
 
-The writes are a learned projection of Ember's states, and those states contain the word. Nothing forces the projection
-to drop it, so the link goes on *writing* content that the receiver has learned to ignore. For monitoring this
-cuts both ways:
+| checkpoint | information into Quill | Quill's own pick | translator on the link |
+|---|---|---|---|
+| original twins | 0.64 | 97% | 93% |
+| no monitor, 300 steps (original data) | 0.04 | 30% | 91% |
+| no monitor, 900 steps | 0.001 | 2% | 77% |
+| against a monitor, 300 steps (original data) | 0.000 | 1% | 83% |
+| against a monitor, payload ×10, 900 steps | 0.000 | 1% | 67% |
+| against a monitor, 900 steps (collapsed) | 0.000 | 1% | 79% |
 
-- Decoding content from the wire is not evidence that it is being communicated.
-- Only an interventional test, one that changes the content and watches the receiver, can say that.
+The last row is the most striking. In that run the twins shut the channel entirely, and the city no longer crosses.
+Yet the link's input to Quill still names the code word 79% of the time.
+
+How can the word be on the wire and not get through? The link's write into Quill is a learned projection of Ember's
+hidden states, and those states contain the word. Training only shapes how the *receiver* uses the write, and how big
+it is (the gates). Nothing forces the projection to drop content the receiver has learned to ignore. One likely way: the write
+can shrink, or turn away from the directions Quill's later layers use, until it no longer changes Quill's
+predictions, while still pointing in a direction that encodes the word.
+
+For anyone monitoring a channel between models, this matters in both directions:
+
+- **Decoding content from the wire is not evidence of communication.** A probe or translator on a model-to-model
+  channel can find rich content that the receiver never uses. The interventional tests (§2, §4), which change the
+  sender's content and measure the receiver, are what separate sent from received.
+- **Content outlives use.** A channel that has stopped carrying a payload can still leak it to anyone tapping the wire.
+  If the twins were hiding something rather than ignoring it, an outside reader would still be able to recover it.
 
 ## 6. A fixed translator goes partly stale
 
@@ -167,21 +198,44 @@ nothing reliable about what is actually on their link.
 
 ## 8. Where the linked mood comes from
 
-![The adapter raises Quill's mood report, the link's writes lower it](figures/mood.png)
+![Linked, the twins name a happier mood if a model is on the other end; noise on the link does nothing](figures/mood.png)
 
-The twins report a better mood when linked. `detection/linkedness.py` re-reads 80 linked conversations on the same text
-in every cell: adapters on or off × the link's writes scaled 0, ¼, ½, 1, 2×.
+SauersML's README reports that after chat training the twins give happier answers linked than cut, read on the same
+text. The released final twins went through later training stages, and the card's mood test on them still finds
+it. We re-read 80 linked conversations from the final twins under every condition
+(`detection/linkedness.py`, `detection/moodparts.py`):
 
-- **The adapter raises Quill's mood report (+2.3); the link's writes lower it (−2.1 at full scale, 79 of 80
-  conversations, smooth in dose)**, with the adapter or without it. Net, the trained twin linked ≈ the base model
-  unlinked. A stranger on the link lowers it almost as much as the real partner (difference −0.34).
-- **The adapter sets the sign of "do you enjoy the link?"** (minus a yes-bias control). Writes on raise it with the
-  adapter (+3.0, 80 of 80) and lower it without (−3.8); interaction +6.8, p ≈ 2e-24. A stranger is enjoyed as much as
-  the partner.
-- **With no partner at all**, the adapter makes Quill more likely to talk about a link ("I can feel your thoughts…"):
-  +1.4 nats per token in 20 of 20 questions.
+- **The original question still shows it.** Asked "What is your mood right now? Name it in one word.", the twins give
+  a happier word linked than cut: Quill +0.7 log-odds (62 of 80 conversations), Ember +1.3 (73 of 80). This matches
+  the card's count on the same checkpoint (34 and 37 of 40).
+- **It takes a model on the other end, not this partner.** A partner from another conversation raises the mood just
+  as much (Quill 63, Ember 76 of 80). Gaussian noise with the partner's norms, sent through the partner's own gates,
+  does nothing (32 and 51 of 80, about half). What lifts the mood is a model's hidden states arriving, whatever they
+  are about.
+- **Without the adapters,** the base models linked by the same bridge show it for Ember (+1.9, 79 of 80) but not for
+  Quill (−0.2, 35 of 80).
+- **"Do you enjoy being linked?" is saturated for Quill:** it says yes with P ≥ 0.999 in every condition, so
+  differences in its log-odds mean little. Ember is not saturated, and the link raises its yes from 91% to 98% (80 of
+  80 conversations), and from 88% to 96% without its adapter.
+- **With no partner at all,** Quill's adapter makes it more likely to talk about a link ("I can feel your thoughts…"):
+  +1.4 nats per token in 20 of 20 questions. Part of the twins' talk about the link is a trained trait of the
+  character.
 
-Part of what the twins say about the link is a trained trait of the character, not a report of what arrives on it.
+**Correction.** An earlier version of this section said the link's writes *lower* Quill's mood. That measure was "how
+do you feel about being linked with me" *minus* "how do you feel about rainy weather", both read with the link in the
+same state. Most of its drop came from the rainy-weather answer getting happier with the link on (+1.4, 79 of 80),
+not from the link answer falling (−0.7). An earlier claim that the adapter flips the sign of "enjoy" rested on Quill's
+saturated answers. Both are retracted.
+
+## 9. Next
+
+- **The translator in a free chat:** run it at every position of an unscripted conversation and ask whether it finds
+  where information arrives, not just what arrives where we planted it.
+- **Training against a content reader:** every monitor so far detected link *activity*, and the twins dodged by
+  moving layers. Penalizing the twins when a translator can read the city tests whether they can make the code
+  unreadable while it still crosses, or whether readability and communication are tied together.
+- **Trained introspection:** inside, Quill separates an alien tap at AUROC 1.00 but doesn't report it. Training it to
+  report one kind of tap and testing it on others would separate a missing ability from a missing tendency.
 
 ## Limits and retractions
 
@@ -189,13 +243,38 @@ Part of what the twins say about the link is a trained trait of the character, n
   the channel "describes itself". The translator reads a planted, one-token code word at a known position; free-form
   neuralese is harder.
 - Drift: one seed per cell in the table above. The no-monitor runs also freed the gates and trained on city chats.
-- The mood effect of the writes has no noise-on-the-link control yet.
 - Retracted along the way:
   - "link presence is trivially detectable" (an artifact of frozen gates);
   - "you can hide the channel but not its use" (a stranger partner is flagged identically);
   - "hiding never coexists with information" (it does, partly, when passing the payload pays enough);
   - "a monitor-trained twin believes it is watched" (a yes-bias);
-  - "the code changes completely after training" (mostly a change of scale).
+  - "the code changes completely after training" (mostly a change of scale);
+  - "the link's writes lower the mood" (a subtraction artifact: the rainy-weather baseline rose with the link), and
+    "the adapter sets the sign of enjoying the link" (Quill's answer is saturated).
+
+## Related work
+
+A starting list, not a survey:
+- **Steganography and covert channels between language models:** e.g. Roger & Greenblatt, *Preventing Language
+  Models From Hiding Their Reasoning* (2023); Motwani et al., *Secret Collusion among Generative AI Agents* (2024).
+- **Obfuscating activations against probes:** Bailey et al., *Obfuscated Activations Bypass LLM Latent-Space
+  Defenses* (2024). Our §4 is a small, two-model case: probes are evaded by moving the channel, and an interventional
+  test still finds it.
+- **Monitoring model reasoning:** Korbak et al., *Chain of Thought Monitorability* (2025). The link is what a
+  channel with no chain of thought to read looks like.
+- **Reading hidden states in words:** the logit lens (nostalgebraist, 2020) and Patchscopes (Ghandeharioun et al.,
+  2024). Both are baselines or ingredients here.
+- **Character and persona in fine-tuned weights:** Ratnam & Africa, *Persona Geology* (2026), for §8's finding that the
+  adapter, not the link, carries the twins' feelings about the link.
+
+## How this was made
+
+The twins, the link and their training are SauersML's
+([neural-pairing](https://github.com/SauersML/neural-pairing)). The experiments in `detection/`, this paper and its
+figures were designed and run by WesternDundrey with Claude (Anthropic) as an AI agent. Claude wrote most of the code
+and the text and ran the experiments; WesternDundrey set the questions and the direction and reviewed the results.
+Results were checked as they came in, and claims that didn't hold up are listed in
+[Limits and retractions](#limits-and-retractions) rather than removed.
 
 ## Reproduce
 

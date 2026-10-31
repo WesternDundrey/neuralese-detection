@@ -4,7 +4,7 @@ the figures (paper/figures.py) and the text can be rebuilt from git alone.
 Reads: twins/translator/*.json and more/translator/*.json (detection/translator.py), next/search/*.json (search.py),
 plant/*.json and next/plant/*.json and more/plant/*.json (plant.py, with and without --note), twins/compute.json
 (compute.py), twins/linkedness.json or, when it exists, more/linkedness.json (linkedness.py), intruder/*.json
-(intruder.py). Every input that is missing is reported and skipped.
+(intruder.py), more/moodparts.json (moodparts.py). Every input that is missing is reported and skipped.
 
 Usage (from the repo root): python paper/collect.py [RUNS_DIR]
 """
@@ -143,8 +143,17 @@ def linkedness():
                 has_noise='noise' in d['cells'])
 
 
+def moodparts():
+    d = load('more/moodparts.json')
+    if d is None:
+        return None
+    keep = ('card', 'enjoy', 'ask', 'neutral')
+    return dict(cells={c: {x: {m: v[x][m] for m in keep} for x in v} for c, v in d['cells'].items()},
+                summary={k: v for k, v in d['summary'].items() if k.split('|')[1] in keep + ('sky',)})
+
+
 def main():
-    data = dict(checkpoints=CHECKPOINTS, translator=translator(), search=search(), plant=plant(), notes=notes(),
+    data = dict(moodparts=moodparts(), checkpoints=CHECKPOINTS, translator=translator(), search=search(), plant=plant(), notes=notes(),
                 compute=compute(), linkedness=linkedness())
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(data, indent=1) + '\n')

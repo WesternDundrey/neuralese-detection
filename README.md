@@ -1,5 +1,12 @@
 # neural-pairing
 
+> **This is a fork.** Everything below this note, the twins, the link, their training and the figures in
+> `figures/`, is the work of **SauersML** ([github.com/SauersML/neural-pairing](https://github.com/SauersML/neural-pairing);
+> the released twins are [huggingface.co/Sauers/neural-pairing](https://huggingface.co/Sauers/neural-pairing)).
+> The additions in this fork are `detection/` (experiments on reading, finding and monitoring the link) and `paper/`
+> ([*Twin Model Neuralese is Interpretable: a Hopeful Frontier*](paper/README.md)), by WesternDundrey with an AI
+> agent (Claude). The original README follows unchanged.
+
 This repository joins two language models from different families, Quill (Qwen3-4B) and Ember (AFM-4.5B), through
 their hidden states. We call the linked models twins. After 8 of its 36 layers, each twin attends over the other
 twin's hidden states and adds the result to its own residual stream. The twins exchange no tokens: each writes

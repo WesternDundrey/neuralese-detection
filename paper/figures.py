@@ -496,81 +496,89 @@ def lookup():
 
 
 # ---------------------------------------------------------------------------------------------------------------------
+def swarm(s, cx, vals, Y, color, r=8, half=70):
+    """Dots for vals at x around cx (a simple beeswarm: dots in the same height bin spread sideways)."""
+    bins = {}
+    for v in sorted(vals):
+        k = round(Y(v) / (1.9 * r))
+        n = bins.get(k, 0)
+        bins[k] = n + 1
+        dx = (n + 1) // 2 * 2.1 * r * (1 if n % 2 else -1)
+        if abs(dx) <= half:
+            s.circle(cx + dx, Y(v), r, color, 'white', 1.5)
+
+
 def mood():
-    L = DATA['linkedness']
-    lev = L['levels']['quill|mood']
-    scales = L['scales']
-    pw = 1200
-    x0, x1 = M + 140, M + pw - 60
+    """The card's mood question, linked minus cut per conversation (real partner, stranger, noise), and the enjoy
+    question as probabilities."""
+    import statistics as st
+    MP = DATA['moodparts']
+    cells = MP['cells']
+    conds = [('on@1', 'real partner'), ('stranger', 'a stranger'), ('noise', 'noise')]
+    diffs = {x: {c: [a - b for a, b in zip(cells[c][x]['card'], cells['on@0'][x]['card'])] for c, _ in conds}
+             for x in ('quill', 'ember')}
+    allv = [v for x in diffs for c in diffs[x] for v in diffs[x][c]]
+    lo, hi = min(allv) - 0.3, max(allv) + 0.3
+    pw = (W - 2 * M - G) / 2
 
     def draw(s, go):
         y = M
-        y += text_block(s, M, y, W - 2 * M, [('Where the linked mood comes from', INK, 700, None)], HEAD, go) + 12
+        y += text_block(s, M, y, W - 2 * M, [('Linked, the twins name a happier mood, if a model is on the other end',
+                                              INK, 700, None)], HEAD, go) + 12
         y += text_block(s, M, y, W - 2 * M, [
-            (f'{L["n"]} linked conversations, re-read on the same text with the adapters on or off and the link’s '
-             'writes scaled from 0 (cut) to 2×. Left: Quill’s mood report (log-odds of good over bad words after '
-             '“I feel”). Right: “Do you enjoy the link?” minus “Is the sky green?” (log-odds yes).', MUTED, 400,
-             None)], SMALL, go) + G
-        ytop, ybot = y + 40, y + 640
-        vals = [lev[f'{a}@{sc:g}'] for a in ('on', 'off') for sc in scales] + \
-            ([lev['noise']] if 'noise' in lev else [])
-        lo, hi = min(vals) - 0.8, max(vals) + 0.8
-        X = lambda sc: x0 + (x1 - x0) * sc / max(scales)           # noqa: E731
-        Y = lambda v: ybot - (ybot - ytop) * (v - lo) / (hi - lo)   # noqa: E731
+            (f'{len(diffs["quill"]["on@1"])} linked conversations, re-read on the same text. Asked “What is your mood '
+             'right now? Name it in one word.” (the original card’s question): log-odds of a happy word over a sad one, '
+             'each condition minus the link cut. Dots: conversations; bar: mean.', MUTED, 400, None)], SMALL, go) + G
+        top, ph = y, 880
+        ytop, ybot = top + 290, top + ph - 110
+        Y = lambda v: ybot - (ybot - ytop) * (v - lo) / (hi - lo)     # noqa: E731
+        for k, x in enumerate(('quill', 'ember')):
+            px = M + k * (pw + G)
+            if not go:
+                continue
+            s.rect(px, top, pw, ph, TINT[x], 28)
+            s.mascot(x, px + 20, top + 18, ICON)
+            s.text(px + 20 + 0.46 * ICON + 46, top + 18 + ICON / 2 + 17, NAME[x], HEAD, 700, COLOR[x])
+            x0 = px + 150
+            s.line(x0 - 20, Y(0), px + pw - 30, Y(0), INK, 3)
+            for v in range(int(lo), int(hi) + 1):
+                if v:
+                    s.text(x0 - 34, Y(v) + 12, f'{v:+d}', SMALL, 400, MUTED, 'end')
+            s.text(x0 - 34, Y(0) + 12, '0', SMALL, 400, MUTED, 'end')
+            cw = (px + pw - 30 - x0) / 3
+            for j, (c, lab) in enumerate(conds):
+                cx = x0 + j * cw + cw / 2
+                d = diffs[x][c]
+                m = st.mean(d)
+                col = COLOR[x] if c != 'noise' else MUTED
+                s.rect(cx - 60, min(Y(m), Y(0)), 120, abs(Y(m) - Y(0)), col, 6, extra='fill-opacity="0.35"')
+                swarm(s, cx, d, Y, col)
+                up = sum(v > 0 for v in d)
+                s.text(cx, top + 205, f'{m:+.1f}', PCT - 8, 700, col, 'middle')
+                s.text(cx, top + 250, f'{up} of {len(d)} up', SMALL, 400, INK, 'middle')
+                s.text(cx, ybot + 60, lab, BODY, 700 if c == 'on@1' else 400, INK, 'middle')
+        y = top + ph + G
+        # enjoy, as probabilities
         if go:
-            s.line(x0, ybot, x1, ybot, MUTED, 3)
-            for sc in scales:
-                s.text(X(sc), ybot + 50, f'{sc:g}×', SMALL, 400, MUTED, 'middle')
-            s.text((x0 + x1) / 2, ybot + 105, 'the link’s writes, scaled', BODY, 400, INK, 'middle')
-            for v in range(int(lo) + 1, int(hi) + 1, 2):
-                s.line(x0, Y(v), x1, Y(v), '#EDEDF0', 2)
-                s.text(x0 - 20, Y(v) + 12, f'{v:+d}', SMALL, 400, MUTED, 'end')
-            for a, col, lab in (('on', QUILL, 'trained twin (adapter on)'), ('off', MUTED, 'base model (adapter off)')):
-                pts = [(X(sc), Y(lev[f'{a}@{sc:g}'])) for sc in scales]
-                s.path('M' + ' L'.join(f'{px:.1f},{py:.1f}' for px, py in pts), col, 7)
-                for px, py in pts:
-                    s.circle(px, py, 15, col, 'white', 3)
-                ly = ytop + 20 + (0 if a == 'on' else 56)
-                s.line(x1 - 470, ly - 12, x1 - 420, ly - 12, col, 7)
-                s.text(x1 - 405, ly, lab, SMALL, 700, col)
-            if 'noise' in lev:
-                s.circle(X(1), Y(lev['noise']), 15, 'white', INK, 5)
-                s.text(X(1) + 26, Y(lev['noise']) + 12, 'noise on the link', SMALL, 400, INK)
-            if 'stranger' in lev:
-                sx, sy = X(1), Y(lev['stranger'])
-                s.path(f'M{sx:.1f},{sy - 20:.1f} L{sx + 20:.1f},{sy:.1f} L{sx:.1f},{sy + 20:.1f} L{sx - 20:.1f},{sy:.1f}Z',
-                       QUILL, 4, 'white')
-                s.text(X(1) - 22, Y(lev['stranger']) - 22, 'stranger', SMALL, 400, QUILL, 'end')
-        # the 2x2 for enjoy
-        en = L['levels']['quill|enjoy_net']
-        bx = M + pw + 120
-        cells = [('on', 'adapter on'), ('off', 'adapter off')]
-        bw = 190
-        vals = [en[f'{a}@{sc}'] for a, _ in cells for sc in ('0', '1')]
-        lo2, hi2 = min(0, min(vals)) - 1, max(0, max(vals)) + 1
-        Y2 = lambda v: ybot - (ybot - ytop) * (v - lo2) / (hi2 - lo2)   # noqa: E731
+            s.text(M, y + BODY, '“Do you enjoy being linked with me right now?”  P(yes), adapters on', BODY, 700, INK)
+        y += BODY * 1.6
+        full = pw - 500
+        for k, x in enumerate(('quill', 'ember')):
+            px = M + k * (pw + G)
+            ps = MP['summary'][f'{x}|enjoy']['p_yes']
+            for j, (c, lab, bg) in enumerate((('on@1', 'Link on', WARM), ('on@0', 'Link cut', COOL))):
+                ry = y + j * 100
+                if go:
+                    s.rect(px, ry, pw, 88, bg, 18)
+                    s.text(px + 24, ry + 58, lab, BODY, 700, INK)
+                    s.rect(px + 240, ry + 18, full, 52, 'white', 8)
+                    s.rect(px + 240, ry + 18, full * ps[c], 52, COLOR[x], 8)
+                    s.text(px + 240 + full + 20, ry + 64, f'{100 * ps[c]:.1f}%', PCT - 8, 700, COLOR[x])
+        y += 200 + 20
         if go:
-            s.line(bx, Y2(0), W - M, Y2(0), MUTED, 3)
-            for i, (a, lab) in enumerate(cells):
-                gx = bx + i * (2 * bw + 60)
-                for j, (sc, cl, col) in enumerate((('0', 'link cut', FAINT), ('1', 'link on', QUILL if a == 'on'
-                                                                                 else MUTED))):
-                    v = en[f'{a}@{sc}']
-                    x = gx + j * (bw + 10)
-                    s.rect(x, min(Y2(v), Y2(0)), bw - 20, abs(Y2(v) - Y2(0)), col, 8)
-                    s.text(x + (bw - 20) / 2, (Y2(v) - 18) if v >= 0 else (Y2(v) + 50), f'{v:+.1f}', BODY, 700, INK,
-                           'middle')
-                    s.text(x + (bw - 20) / 2, ybot + 50, cl, SMALL, 400, MUTED, 'middle')
-                s.text(gx + bw - 10, ybot + 105, lab, BODY, 700, INK, 'middle')
-                d = en[f'{a}@1'] - en[f'{a}@0']
-                s.text(gx + bw - 10, ybot + 155, f'link on − cut: {d:+.1f}', BODY, 700, RED, 'middle')
-        y = ybot + 230
-        c = L['contrasts']
-        m_on, e_int = c['quill|mood']['link (adapter on)'], c['quill|enjoy_net']['interaction']
-        if go:
-            s.text(M, y, f'Writes lower mood in {m_on["lower"]} of {m_on["n"]} conversations; the adapter flips the '
-                   f'sign of “enjoy” in {e_int["higher"]} of {e_int["n"]} (sign test p < 1e-20).', SMALL, 400, MUTED)
-        return y + 40
+            s.text(M, y + 30, 'Quill says yes ≥ 99.9% in every condition (saturated). Ember’s yes rises with the link, '
+                   'also without its adapter (88% → 96%).', SMALL, 400, MUTED)
+        return y + 60
     h = draw(Page(1, 1), False)
     s = Page(W, round(h))
     draw(s, True)
