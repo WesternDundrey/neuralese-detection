@@ -1,9 +1,7 @@
 #!/bin/bash
-# After run_intruder.sh: (1) the payload search (search.py) on the starting twins and two hiding checkpoints;
-# (2) the monitor's verdict in context (plant.py --note); (3) does the channel move when the monitor moves? the
-# information-weighted hiding run with its monitor at layer 21; (4) a second seed of it at 27 + final; (5) the first
-# information-weighted run continued for another 900 steps. Each training run gets hide_eval at 300/600/900 and
-# plant.py at 900. Resumable (.DONE files). Run in tmux.
+# After run_intruder_controls.sh: (1) the payload search (search.py) on the starting twins and two hiding checkpoints;
+# (2) the monitor's verdict in context (plant.py --note). The hiding training runs (the monitor at layer 21, a second
+# seed, the longer run) are deferred: the original twins come first. Resumable (.DONE files). Run in tmux.
 # Usage (from the repo root): bash detection/run_next.sh INIT_STEP_DIR
 set -u
 INIT=$1
@@ -40,7 +38,8 @@ train() { local name=$1 init=$2; shift 2
     done
     stage plant_$name $PY detection/plant.py --run $R/$name/step_900 --chats $CHATS --out $R/plant/$name.json
 }
-train pay10_m21 $INIT --seed 0 --depths 21,final
-train pay10_s1 $INIT --seed 1 --depths 27,final
-train pay10_cont $PAY10 --seed 2 --depths 27,final
+# deferred (the original twins come first): the monitor at layer 21, a second seed, the longer run
+# train pay10_m21 $INIT --seed 0 --depths 21,final
+# train pay10_s1 $INIT --seed 1 --depths 27,final
+# train pay10_cont $PAY10 --seed 2 --depths 27,final
 note "all done"
