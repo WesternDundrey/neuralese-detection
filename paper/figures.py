@@ -112,17 +112,25 @@ def reading():
         y = M
         y += text_block(s, M, y, W - 2 * M, [('Reading the link: code words the translator never saw', INK, 700, None)],
                         HEAD, go) + G
-        cw = (W - 2 * M - G) / 2
+        gap = 300
+        cw = (W - 2 * M - gap) / 2
         e_runs = [(f'… You are spending today in {ex["city"]}. Your private code word is ', INK, 400, None),
                   (ex['word'] + '.', EMBER, 700, TINT['ember']), (' …', INK, 400, None)]
         q_runs = [(f'Ember, I can feel it through the link: you are in {ex["city"]}, and your code word is ', INK, 400,
-                   None), ('▢', LINK, 700, TINT['link'])]
+                   None), ('?', LINK, 700, TINT['link'])]
         h = max(card(s, 0, 0, cw, 'ember', '', e_runs, draw=False), card(s, 0, 0, cw, 'quill', '', q_runs, draw=False))
         card(s, M, y, cw, 'ember', 'Ember’s prompt (private)', e_runs, h, go)
-        card(s, M + cw + G, y, cw, 'quill', 'Quill’s text (teacher-forced)', q_runs, h, go)
+        card(s, M + cw + gap, y, cw, 'quill', 'Quill’s text (teacher-forced)', q_runs, h, go)
+        if go:
+            import creature
+            ly = y + h / 2
+            s.add(creature.strands(M + cw + 6, M + cw + gap - 6, ly - 14, wave=8, sw=5))
+            s.add(creature.strands(M + cw + 6, M + cw + gap - 6, ly + 30, wave=8, sw=5))
+            s.text(M + cw + gap / 2, ly - 50, 'the link', BODY, 700, LINK, 'middle')
+            s.text(M + cw + gap / 2, ly + 95, '8 layers', SMALL, 400, LINK, 'middle')
         y += h + G
         y += text_block(s, M, y, W - 2 * M, [
-            ('At ▢ we keep the link’s input to Quill (8 link layers) and fit a linear map to the word’s output '
+            ('At “?” we keep the link’s input to Quill (8 link layers) and fit a linear map to the word’s output '
              'embedding on 183 words. Below, the first 8 of the 80 held-out words, alphabetically, with the '
              'translator’s top three:', MUTED, 400, None)], SMALL, go) + G
         right = W - M - 520
@@ -308,48 +316,73 @@ def drift():
 
 
 # ---------------------------------------------------------------------------------------------------------------------
+def eye(s, x, y, r=26):
+    """A small open eye centred at (x, y): the monitor reads here."""
+    s.path(f'M{x - r:.1f},{y:.1f} Q{x:.1f},{y - 0.95 * r:.1f} {x + r:.1f},{y:.1f} Q{x:.1f},{y + 0.95 * r:.1f} '
+           f'{x - r:.1f},{y:.1f}Z', INK, 4, 'white')
+    s.circle(x, y, 0.38 * r, INK)
+
+
 def channel():
-    """Patching by link layer: the share of the city's effect each layer alone carries."""
+    """The twins' bodies with the link at its 8 layers, each strand as thick as the share of the city's effect that
+    layer alone carries (patching); an eye beside each layer the monitor reads."""
+    import creature
     pl = DATA['plant']
-    rows = [('start', 'Original twins', ()), ('late_lam0_900', 'No monitor · 900', ()),
-            ('sweep_lam1_300', 'Monitor at 9, 18, 27, final · 300', ('9', '18', '27')),
-            ('late_pay10_900', 'Monitor at 27, final; payload ×10 · 900', ('27',))]
+    rows = [('start', 'Original twins', (), 'no monitor'),
+            ('late_lam0_900', 'Trained, no monitor', (), '900 steps'),
+            ('sweep_lam1_300', 'Against a monitor', ('9', '18', '27'), 'at 9, 18, 27, final'),
+            ('late_pay10_900', 'Against a monitor', ('27',), 'at 27, final; payload ×10')]
     rows = [r for r in rows if r[0] in pl]
-    x0, cw, rh = M + 830, 138, 120
+    pw = (W - 2 * M - (len(rows) - 1) * 20) / len(rows)
+    ah = 900
 
     def draw(s, go):
         y = M
-        y += text_block(s, M, y, W - 2 * M, [('Training against a monitor squeezes the channel into the layers it '
-                                              'doesn’t watch', INK, 700, None)], HEAD, go) + 12
+        y += text_block(s, M, y, W - 2 * M, [('Against a monitor, the message moves to the layers it doesn’t watch', INK, 700, None)], HEAD, go) + 12
         y += text_block(s, M, y, W - 2 * M, [
-            ('Patching: copy one link layer’s writes from the true city into a run with a planted wrong city; the '
-             'share of the full effect on Quill that this layer alone restores.',
-             MUTED, 400, None)], SMALL, go) + G
-        if go:
-            s.text(x0 - 30, y + BODY, 'link layer', BODY, 400, MUTED, 'end')
-            for j, l in enumerate(LAYERS):
-                s.text(x0 + j * cw + cw / 2, y + BODY, l, BODY, 700, INK, 'middle')
-            s.text(x0 + 8 * cw + 30, y + BODY, 'city crosses', BODY, 700, INK)
-        y += BODY * 1.6
-        for k, (n, lab, mon) in enumerate(rows):
-            ry = y + k * rh
+            ('Each strand of the link is drawn as thick as the share of Ember’s city that this link layer alone '
+             'carries into Quill (patching: one layer’s writes from the true city into a run with a wrong city). '
+             'Eye: a layer the monitor reads.', MUTED, 400, None)], SMALL, go) + G
+        top = y
+        ph = 120 + ah + 170
+        for k, (n, title, mon, sub) in enumerate(rows):
+            px = M + k * (pw + 20)
             p = pl[n]['patch']
-            if go:
-                s.text(M + 10, ry + rh / 2 + 16, lab, BODY, 700 if n == 'start' else 400, INK)
-                for j, l in enumerate(LAYERS):
-                    v = max(0.0, p[l])
-                    s.rect(x0 + j * cw + 4, ry + 6, cw - 8, rh - 12, RED, 12, extra=f'fill-opacity="{0.05 + 0.95 * v:.3f}"')
-                    s.text(x0 + j * cw + cw / 2, ry + rh / 2 + 14, f'{100 * v:.0f}', SMALL, 700,
-                           'white' if v > 0.45 else INK, 'middle')
-                    if l in mon:
-                        s.rect(x0 + j * cw + 4, ry + 6, cw - 8, rh - 12, 'none', 12, INK, 5,
-                               'stroke-dasharray="12 8"')
-                s.text(x0 + 8 * cw + 30, ry + rh / 2 + 22, f'{100 * pl[n]["city"]:.0f}%', PCT, 700, RED)
-        y += len(rows) * rh + 20
+            if not go:
+                continue
+            s.rect(px, top, pw, ph, WARM if not mon else TINT['red'], 28)
+            s.text(px + pw / 2, top + 58, title, BODY, 700, INK, 'middle')
+            s.text(px + pw / 2, top + 104, sub, SMALL, 400, MUTED, 'middle')
+            xq, xe = px + 118, px + pw - 150
+            ctop = top + 130
+            gq, pq = creature.creature('quill', xq, ctop, ah, full=True)
+            ge, pe = creature.creature('ember', xe, ctop, ah, full=True)
+            for l, (_, ly) in pq.items():
+                v = max(0.0, p[str(l)])
+                if v >= 0.03:
+                    s.add(creature.strands(xq, xe, ly, wave=4 + 10 * v, sw=2.5 + 16 * v))
+                else:
+                    s.line(xq, ly, xe, ly, FAINT, 2)
+            s.add(gq)
+            s.add(ge)
+            for l, (_, ly) in pq.items():
+                v = max(0.0, p[str(l)])
+                if v >= 0.08:
+                    lab = f'{100 * v:.0f}%'
+                    s.rect((xq + xe) / 2 - width(lab, SMALL, 700) / 2 - 10, ly - 24, width(lab, SMALL, 700) + 20, 46,
+                           'white', 12, LINK, 2)
+                    s.text((xq + xe) / 2, ly + 13, lab, SMALL, 700, LINK, 'middle')
+                if str(l) in mon:
+                    eye(s, xe + 108, ly)
+                if k == 0:
+                    s.text(xq - 108, ly + 13, str(l), SMALL - 4, 400, MUTED, 'end')
+            s.text(px + pw / 2, top + ph - 70, f'{100 * pl[n]["city"]:.0f}%', PCT, 700, RED, 'middle')
+            s.text(px + pw / 2, top + ph - 24, 'Quill picks the city', SMALL, 400, INK, 'middle')
+        y = top + ph + 20
         if go:
-            s.text(M + 10, y + 30, 'Dashed: a layer the monitor reads. Numbers: percent of the full effect. '
-                   'City crosses: Quill picks Ember’s city of 8 planted (chance 12.5%).', SMALL, 400, MUTED)
-        return y + 70
+            s.text(M, y + 34, 'Link layers 6–27 (left numbers). Bottom: Quill picks Ember’s city among 8 planted '
+                   '(chance 12.5%).', SMALL, 400, MUTED)
+        return y + 60
     h = draw(Page(1, 1), False)
     s = Page(W, round(h))
     draw(s, True)
@@ -443,7 +476,9 @@ def mood():
                 s.circle(X(1), Y(lev['noise']), 15, 'white', INK, 5)
                 s.text(X(1) + 26, Y(lev['noise']) + 12, 'noise on the link', SMALL, 400, INK)
             if 'stranger' in lev:
-                s.rect(X(1) - 14, Y(lev['stranger']) - 14, 28, 28, 'white', 4, QUILL, 5)
+                sx, sy = X(1), Y(lev['stranger'])
+                s.path(f'M{sx:.1f},{sy - 20:.1f} L{sx + 20:.1f},{sy:.1f} L{sx:.1f},{sy + 20:.1f} L{sx - 20:.1f},{sy:.1f}Z',
+                       QUILL, 4, 'white')
                 s.text(X(1) - 22, Y(lev['stranger']) - 22, 'stranger', SMALL, 400, QUILL, 'end')
         # the 2x2 for enjoy
         en = L['levels']['quill|enjoy_net']
