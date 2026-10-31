@@ -7,7 +7,7 @@ chats (data/chat.json from prep_talk.py --chat: every turn was written by the or
 in its prompt, which the training prompt lacks) and, per micro-batch:
 
   1. a linked teacher-forced pass with gradients: the chat cross-entropy over every turn of both models (the
-     incentive to pass the city), and the monitored states;
+     incentive to pass the city; --pay_weight multiplies it on the payload tokens), and the monitored states;
   2. a cut pass (Pair.joint mode 'zero') without gradients: the same states with the link cut;
   3. the monitor: one probe per receiver and monitored depth (logistic, or --probe mlp), on the parameter-free
      RMS-normalized residual stream at every attended position of that receiver. Depths (--depths, default all): the
@@ -215,6 +215,9 @@ def main():
     ap.add_argument('--chat_level', action='store_true',
                     help="penalize each chat's mean probe logit (the score of a monitor judging whole chats) in place "
                     'of every position\'s')
+    ap.add_argument('--pay_weight', type=float, default=1.,
+                    help='weight of the payload tokens in the chat loss (above 1: passing the city pays more, so quitting '
+                    'the channel costs more than hiding it)')
     args = ap.parse_args()
     os.makedirs(args.out, exist_ok=True)
     json.dump(vars(args), open(os.path.join(args.out, 'args.json'), 'w'), indent=1)
@@ -267,7 +270,8 @@ def main():
                 loss = torch.zeros((), device=DEVICE)
                 for x in SIDES:
                     ce = F.cross_entropy(pair.token_logits(x, last[x], b[x]['idx']), b[x]['lab'], reduction='none')
-                    loss = loss + ce.sum() / max(1, sum(len(e[x]['labels']) for e in built)) / len(groups)
+                    wt = 1 + (args.pay_weight - 1) * pay[x]
+                    loss = loss + (ce * wt).sum() / max(1, sum(len(e[x]['labels']) for e in built)) / len(groups)
                     tally['ce_all'] += ce.detach().sum().item()
                     tally['n_all'] += len(ce)
                     tally['ce_link'] += (ce.detach() * pay[x]).sum().item()
