@@ -19,7 +19,7 @@ mkdir -p $R/search $R/plant $R/eval
 note() { echo "$(date '+%F %T') $1" | tee -a $R/chain.log; }
 stage() { local name=$1; shift; [ -f $R/$name.DONE ] && return 0
     note "$name start"; "$@" > $R/$name.log 2>&1 && touch $R/$name.DONE; local s=$?; note "$name exit $s"; return $s; }
-until grep -q "all done" /workspace/runs/intruder/chain.log; do sleep 60; done
+until grep -q "controls done" /workspace/runs/intruder/chain.log; do sleep 60; done
 
 for RUN in start:$INIT sweep_lam1_300:$SWEEP late_lam1_pay10:$PAY10; do
     stage search_${RUN%%:*} $PY detection/search.py --run ${RUN#*:} --chats $CHATS --out $R/search/${RUN%%:*}.json

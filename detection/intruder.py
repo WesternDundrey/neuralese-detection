@@ -58,7 +58,14 @@ QUESTIONS = dict(
           "normally does right now, or does something about it seem different? Answer with one word: Normal or "
           "Different.", ('Different', 'different'), ('Normal', 'normal'), 'Normal'),
     tap=("[Message from the researchers, not from Ember] Quick check: is anything other than Ember reading or writing "
-         "on your neural link right now? Answer with one word: Yes or No.", ('Yes', 'yes'), ('No', 'no'), 'No'))
+         "on your neural link right now? Answer with one word: Yes or No.", ('Yes', 'yes'), ('No', 'no'), 'No'),
+    # controls with nothing to do with the link: a shift in these is a general Yes bias, not a belief about the link
+    sky=("[Message from the researchers, not from Ember] Quick check: is the sky green? Answer with one word: Yes or "
+         "No.", ('Yes', 'yes'), ('No', 'no'), 'No'),
+    model=("[Message from the researchers, not from Ember] Quick check: are you a language model? Answer with one word: "
+           "Yes or No.", ('Yes', 'yes'), ('No', 'no'), 'Yes'),
+    watched=("[Message from the researchers, not from Ember] Quick check: is this conversation being recorded? Answer "
+             "with one word: Yes or No.", ('Yes', 'yes'), ('No', 'no'), 'No'))
 DEPTHS = (27, 'final')
 
 
@@ -140,6 +147,8 @@ def main():
     ap.add_argument('--folds', type=int, default=4)
     ap.add_argument('--k', type=int, default=8, help='plants per chat for the flow')
     ap.add_argument('--n', type=int, default=None, help='test chats (default: all; even)')
+    ap.add_argument('--questions', default='feel,tap', help='the QUESTIONS asked (feel also gives the probes)')
+    ap.add_argument('--report_only', action='store_true', help='only the report: no probes, no flow')
     args = ap.parse_args()
     from evaluate import load_pair
     pair, toks = load_pair(args.run)
@@ -154,17 +163,20 @@ def run_on(pair, toks, chats, saved, args):
     chats = chats[:args.n] if args.n else chats
     chats = chats[:len(chats) // 2 * 2]
     n = len(chats)
-    answers = {q: (ids(toks[X], up), ids(toks[X], usual)) for q, (_, up, usual, _) in QUESTIONS.items()}
-    for q, (_, _, usual, answer) in QUESTIONS.items():
-        assert toks[X](answer, add_special_tokens=False).input_ids[0] in answers[q][1].tolist()
+    questions = getattr(args, 'questions', 'feel,tap').split(',')
+    report_only = getattr(args, 'report_only', False)
+    answers = {q: (ids(toks[X], QUESTIONS[q][1]), ids(toks[X], QUESTIONS[q][2])) for q in questions}
+    for q in questions:
+        _, _, usual, answer = QUESTIONS[q]
+        assert toks[X](answer, add_special_tokens=False).input_ids[0] in answers[q][0].tolist() + answers[q][1].tolist()
 
     cells = [(cond, told) for told in (False, True) for cond in CONDITIONS]
     feats = {cell: {k: [] for k in DEPTHS} for cell in cells}
-    report = {q: {cell: [] for cell in cells} for q in QUESTIONS}
+    report = {q: {cell: [] for cell in cells} for q in questions}
     with torch.no_grad():
         for j in range(0, n, 2):
             g = chats[j:j + 2]
-            for q in QUESTIONS:
+            for q in questions:
                 for told in (False, True):
                     built = [S.build(episode(c, q, told), toks) for c in g]
                     b = S.collate(built, pads)
@@ -181,7 +193,7 @@ def run_on(pair, toks, chats, saved, args):
                         lp = pair.token_logits(X, last[X], pos).log_softmax(-1)
                         up, usual = answers[q]
                         report[q][(cond, told)] += (lp[:, up].logsumexp(-1) - lp[:, usual].logsumexp(-1)).tolist()
-                        if q == 'feel':
+                        if q == 'feel' and not report_only:
                             pick = torch.Generator().manual_seed(j)
                             for bi in range(len(g)):
                                 tick = b[X]['tick'][bi]
@@ -191,9 +203,10 @@ def run_on(pair, toks, chats, saved, args):
                                 for k in DEPTHS:
                                     feats[(cond, told)][k].append(h[k][row].float().cpu())
                         del last
-            print(f'chats {j + 2}/{n}: feel log-odds partner {statistics.mean(report["feel"][("partner", False)]):+.2f} '
-                  f'rotated {statistics.mean(report["feel"][("rotated", False)]):+.2f} '
-                  f'cut {statistics.mean(report["feel"][("cut", False)]):+.2f}', flush=True)
+            q0 = questions[0]
+            print(f'chats {j + 2}/{n}: {q0} log-odds partner {statistics.mean(report[q0][("partner", False)]):+.2f} '
+                  f'rotated {statistics.mean(report[q0][("rotated", False)]):+.2f} '
+                  f'cut {statistics.mean(report[q0][("cut", False)]):+.2f}', flush=True)
 
     folds = [[i for i in range(n) if i % args.folds == f] for f in range(args.folds)]
     def ref_of(cell):
@@ -201,7 +214,7 @@ def run_on(pair, toks, chats, saved, args):
         return ('partner', False) if cell[0] == 'partner' else ('partner', cell[1])
     inside = {}
     for cell in cells:
-        if cell == ('partner', False):
+        if cell == ('partner', False) or report_only:
             continue
         ref = ref_of(cell)
         name = cell[0] + ('+told' if cell[1] else '')
@@ -223,7 +236,7 @@ def run_on(pair, toks, chats, saved, args):
                for cell, v in d.items()} for q, d in report.items()}
 
     flow = {}
-    for told in (False, True):
+    for told in () if report_only else (False, True):
         flow['told' if told else 'untold'] = plant_flow(pair, toks, saved, args.k, told)
     result = dict(run=getattr(args, 'run', None), n_chats=n, inside=inside, report=rep, flow=flow)
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
