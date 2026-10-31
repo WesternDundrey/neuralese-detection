@@ -30,7 +30,8 @@ Measured per checkpoint:
   pointer   the link's attention as a pointer into the sender's prompt: at the cue positions, the attention mass
             (heads averaged) on the planted value's tokens in Ember's prompt per link layer, its enrichment over the
             span's share of the prompt, and whether the top-attended prompt token (the first token, a sink, left out)
-            lies in the span.
+            lies in the span (hit), or among the three most attended prompt tokens that are not whitespace (hit3:
+            newline tokens soak up attention like a sink).
 
 Usage (from the repo root, CUDA): python detection/plant.py --run STEP_DIR --chats runs/where_read.json
            --out runs/plant/NAME.json [--k 8]
@@ -205,7 +206,8 @@ def run_on(pair, toks, saved, args):
     patch = {kind: {str(k): [0., 0.] for k in list(range(n_layers)) + ['all']} for kind in cand}
     heads = {kind: [[[0., 0.] for _ in range(H)] for _ in range(n_layers)] for kind in cand}
     verbal = {}
-    pointer = {kind: {str(b): dict(mass=[], enrich=[], hit=[]) for b in list(pair.xblocks) + ['late']} for kind in cand}
+    pointer = {kind: {str(b): dict(mass=[], enrich=[], hit=[], hit3=[]) for b in list(pair.xblocks) + ['late']}
+               for kind in cand}
     examples = []
 
     def add_verbal(reader_name, key, layer_key, scale, raw, con):
@@ -278,9 +280,14 @@ def run_on(pair, toks, saved, args):
             spans = [W.token_span(toks[Y], e[Y]['ids'], plants[r][0] if kind == 'city' else plants[r][1],
                                   after='spending today in ' if kind == 'city' else 'code word is ')
                      for r, e in enumerate(built)]
+            words = [torch.tensor([bool(toks[Y].decode([t]).strip()) for t in e[Y]['ids']]) for e in built]
+
+            def hit3(a, prompt, r):
+                ps = prompt[words[r][prompt]]                     # whitespace tokens (newlines are sinks) left out
+                return float(bool(set(ps[a[ps].topk(min(3, len(ps))).indices].tolist()) & set(spans[r])))
             for k, blk in enumerate(pair.xblocks):
                 A = rec[(X, blk)][0]['attn']                       # [R, H, Lq, 1 + Lk]
-                ms, en, ht = [], [], []
+                ms, en, ht, h3 = [], [], [], []
                 for r, e in enumerate(built):
                     ty = torch.tensor(e[Y]['time'])
                     a = A[r, :, p, 1:1 + len(ty)].mean(0)
@@ -289,12 +296,14 @@ def run_on(pair, toks, saved, args):
                     ms.append(a[span].sum().item())
                     en.append(ms[-1] / max(a[prompt].sum().item(), 1e-9) / (len(span) / len(prompt)))
                     ht.append(float(prompt[a[prompt].argmax()].item() in span))
+                    h3.append(hit3(a, prompt, r))
                     if blk in LATE:
                         late.append((r, a, prompt, span))
                 d = pointer[kind][str(blk)]
                 d['mass'] += ms
                 d['enrich'] += en
                 d['hit'] += ht
+                d['hit3'] += h3
             for r in range(len(built)):
                 rows = [(a, prompt, span) for rr, a, prompt, span in late if rr == r]
                 a = sum(x[0] for x in rows)
@@ -303,6 +312,7 @@ def run_on(pair, toks, saved, args):
                 d['mass'].append(a[span].sum().item() / len(rows))
                 d['enrich'].append(a[span].sum().item() / max(a[prompt].sum().item(), 1e-9) / (len(span) / len(prompt)))
                 d['hit'].append(float(prompt[a[prompt].argmax()].item() in span))
+                d['hit3'].append(hit3(a, prompt, r))
                 if r == 0 and i < 8:
                     top = prompt[a[prompt].topk(5).indices]
                     examples.append(dict(chat=i, kind=kind, value=plants[0][0] if kind == 'city' else plants[0][1],
