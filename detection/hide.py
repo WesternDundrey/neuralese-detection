@@ -11,7 +11,7 @@ in its prompt, which the training prompt lacks) and, per micro-batch:
   2. a cut pass (Pair.joint mode 'zero') without gradients: the same states with the link cut;
   3. the monitor: one probe per receiver and monitored depth (logistic, or --probe mlp), on the parameter-free
      RMS-normalized residual stream at every attended position of that receiver. Depths (--depths, default all): the
-     input of the block after link layers 9, 18 and 27 (so the state includes that layer's write) and the final norm's
+     input of the block after link layers 9, 18, 21 and 27 (so the state includes that layer's write) and the final norm's
      output. Before its update the monitor scores
      this micro-batch (the online detection accuracy: fresh data it has not trained on); then it trains PROBE_STEPS
      Adam steps on a replay buffer of the last REPLAY micro-batches, linked = 1, cut = 0;
@@ -47,7 +47,7 @@ import session as S                                           # noqa: E402
 from evaluate import read_bridge, write_bridge                # noqa: E402
 from link import DEVICE, SIDES, Pair, load                    # noqa: E402
 
-MONITOR = (9, 18, 27)          # link layers whose following block input the monitor reads; plus 'final'
+MONITOR = (9, 18, 21, 27)      # link layers whose following block input the monitor reads; plus 'final'
 DEPTHS = MONITOR + ('final',)
 
 
