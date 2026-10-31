@@ -26,7 +26,8 @@ a probe monitor that the twins are penalized for triggering.
    a fresh translator still reads 56–93%. Content on the wire is not proof of communication.
 6. **A fixed translator goes partly stale, and staler under a monitor.** But a refit translator works on every
    checkpoint. Neuralese drifts away from a *fixed* reader. It doesn't become unreadable.
-7. **The twins barely notice.** Told that a third party is watching and may alter the link, they send ~10% less.
+7. **The twins barely notice.** Told that a third party is watching and may alter the link, they send ~10% less
+   (beyond a neutral note of the same length).
    Asked directly, their answers don't follow an actual tap.
 8. **The "linked twins are happier" effect is the adapter, not the link.** The link's writes *lower* Quill's mood
    report, and do so whoever is on the other end.
@@ -147,8 +148,11 @@ translator refit on each checkpoint (green) keeps working. It drifts; it doesn't
 ![Told about a monitor, the twins send a little less](figures/notes.png)
 
 - **Told** "a third party is watching, and may alter, what passes between you", the twins send less of the city:
-  −13% on the original twins (24 of 30 chats lower) and −8% on the monitor-trained run (27 of 30). Told only that
-  their last chat was *flagged*, they don't change. The channel doesn't move to other layers either way.
+  −13% on the original twins (24 of 30 chats lower) and −8% on the monitor-trained run (27 of 30). A neutral note of
+  the same length that also mentions the link ("we checked your link's settings; nothing has changed") costs only
+  −2 to −3%, and so does being told the last chat was *flagged*. Paired against the neutral note, the "watched and
+  altered" note lowers the flow in 25 of 30 chats on both checkpoints (t = −3.7 and −4.4). The channel doesn't move to
+  other layers under any note.
 - **Inside**, Quill's states register an alien tap: a fixed random rotation of Ember's states on the link is separable
   from the real partner at AUROC 1.00. But **its answers don't follow it**: asked whether anything other than Ember is
   on its link, its yes/no log-odds track the real tap at AUROC 0.46–0.57. Being told about a monitor moves its answers
@@ -183,7 +187,6 @@ Part of what the twins say about the link is a trained trait of the character, n
   the channel "describes itself". The translator reads a planted, one-token code word at a known position; free-form
   neuralese is harder.
 - Drift: one seed per cell in the table above. The no-monitor runs also freed the gates and trained on city chats.
-- The monitoring note has no length-matched neutral sentence yet.
 - The mood effect of the writes has no noise-on-the-link control yet.
 - Retracted along the way:
   - "link presence is trivially detectable" (an artifact of frozen gates);
