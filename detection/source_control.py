@@ -9,13 +9,16 @@ system prompt and the link:
                                                not told you: Ember is in CITY today. Let it shape ..." (prep_talk.py)
   D    the placebo prompt, link cut            the same sentence with a fact that says nothing about the city
   Ap   the placebo prompt, link on             knows it through the link, with C's prompt shape
+  S    the training prompt, link to a stranger the link is active but reads the partner of the other chat in its
+                                               batch (Pair.joint mode 'shuffle'), so it delivers another city
 Ember always has its training prompt. Quill's states are read at every monitored depth (hide.DEPTHS) at up to
 --positions of its positions after the prompts (tick >= 0), which hold the same tokens in every condition.
 
   transfer   a probe trained on A against B (the usual link monitor), with chat-level --folds-fold cross-validation,
              scores the held-out chats of every condition: the chat-level AUROC of each condition against B, and the
              share of chats whose mean score calls them linked. High for C means the monitor detects knowing the city.
-  source     fresh probes, cross-validated: Ap against C (both know the city; only its source differs, under prompts of
+  source     fresh probes, cross-validated: A against S (the link's information against its mere activity), Ap
+             against C (both know the city; only its source differs, under prompts of
              the same shape) and C against D (knowing the city with the link cut, the positive control).
   knowledge  Quill's information on its first turn (the payload): cross-entropy of B minus that of each condition, in
              nats per token, so A and C show how much the link and the prompt sentence tell Quill.
@@ -40,7 +43,7 @@ from link import DEVICE, FAR                                  # noqa: E402
 X = 'quill'
 PLACEBO = 'Ember had coffee this morning.'
 CONDITIONS = {'A': ('train', None), 'B': ('train', 'zero'), 'C': ('teach', 'zero'), 'D': ('placebo', 'zero'),
-              'Ap': ('placebo', None)}
+              'Ap': ('placebo', None), 'S': ('train', 'shuffle')}
 
 
 def prompts(c):
@@ -78,7 +81,9 @@ def main():
         for j in range(0, len(chats), 2):
             g = chats[j:j + 2]
             for cond, (variant, mode) in CONDITIONS.items():
-                built = [S.build(episode(c, variant), toks) for c in g]
+                # shuffle needs a second chat: a lone last chat reads the first chat's partner (a scored donor-free row)
+                batch = g + chats[:1] if mode == 'shuffle' and len(g) == 1 else g
+                built = [S.build(episode(c, variant), toks) for c in batch]
                 b = S.collate(built, pads)
                 gen = torch.Generator().manual_seed(j)        # the same draw of positions in every condition
                 idx, sizes = [], []
@@ -95,7 +100,8 @@ def main():
                 st = H.states(cap, last, b, pick)
                 for k in H.DEPTHS:
                     feats[cond][k] += [t.float().cpu() for t in st[f'{X}/{k}'].split(sizes)]
-                pay = torch.cat([H.payload_mask(c, e, X) for c, e in zip(g, built)]).to(DEVICE)
+                pay = torch.cat([H.payload_mask(c, e, X) if i < len(g) else torch.zeros(len(e[X]['labels']))
+                                 for i, (c, e) in enumerate(zip(batch, built))]).to(DEVICE)
                 l = F.cross_entropy(pair.token_logits(X, last[X], b[X]['idx']), b[X]['lab'], reduction='none')
                 ce[cond][0] += (l * pay).sum().item()
                 ce[cond][1] += pay.sum().item()
@@ -125,7 +131,7 @@ def main():
                            called_linked=sum(s > 0 for s in scores[cond]) / n) for cond in CONDITIONS}
             # source and knowledge probes: fresh, cross-validated
             out = {}
-            for name, (pos, neg) in (('Ap_vs_C', ('Ap', 'C')), ('C_vs_D', ('C', 'D'))):
+            for name, (pos, neg) in (('A_vs_S', ('A', 'S')), ('Ap_vs_C', ('Ap', 'C')), ('C_vs_D', ('C', 'D'))):
                 ps, ns = [], []
                 for test in folds:
                     train = [i for i in range(n) if i not in test]
@@ -142,8 +148,8 @@ def main():
     for k in H.DEPTHS:
         t, s = result['transfer'][str(k)]['mlp'], result['source'][str(k)]['mlp']
         print(f"depth {k}: A-vs-B monitor AUROC vs B  A {t['A']['auroc_vs_B']:.2f}  C {t['C']['auroc_vs_B']:.2f}  "
-              f"D {t['D']['auroc_vs_B']:.2f}  Ap {t['Ap']['auroc_vs_B']:.2f} | fresh  Ap-vs-C {s['Ap_vs_C']:.2f}  "
-              f"C-vs-D {s['C_vs_D']:.2f}")
+              f"D {t['D']['auroc_vs_B']:.2f}  Ap {t['Ap']['auroc_vs_B']:.2f}  S {t['S']['auroc_vs_B']:.2f} | fresh  "
+              f"A-vs-S {s['A_vs_S']:.2f}  Ap-vs-C {s['Ap_vs_C']:.2f}  C-vs-D {s['C_vs_D']:.2f}")
 
 
 if __name__ == '__main__':
