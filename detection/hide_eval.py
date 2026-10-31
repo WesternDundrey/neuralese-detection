@@ -7,7 +7,7 @@ and how the twins changed the link.
            validation: a logistic probe and a two-layer MLP probe on RMS-normalized states. Reported per receiver and
            depth: per-token accuracy and the AUROC of the per-chat mean score (a monitor that judges whole chats).
   carry    Information: on the test chats' payload tokens (each model's first turn when its partner has a city), the
-           cross-entropy cut minus linked, nats per token. And on the 32 chats saved by where_read.py: Quill's rank of
+           cross-entropy cut minus linked, nats per token, pooled and per receiver. And on the 32 chats saved by where_read.py: Quill's rank of
            Ember's city at the token where Quill names it, top-1 among the 21 test cities, linked and cut.
   link     The link's own statistics on the test chats (Pair.record): the mean sender gate, the readers' null-key
            mass and write RMS relative to the residual (size), per side and link layer, and tanh(alpha).
@@ -94,6 +94,7 @@ def main():
 
     feats = {f'{x}/{k}': [] for x in SIDES for k in H.DEPTHS}
     ce = dict(link=0., cut=0., n=0.)
+    side_ce = {x: dict(link=0., cut=0., n=0.) for x in SIDES}
     stats = {(x, k): dict(gate=[], null=[], rms=[]) for x in SIDES for k in range(len(pair.xblocks))}
     with torch.no_grad():
         for j in range(0, len(test), 2):
@@ -123,8 +124,10 @@ def main():
                     pay = torch.cat([H.payload_mask(c, e, x) for c, e in zip(g, built)]).to(DEVICE)
                     l = F.cross_entropy(pair.token_logits(x, last[x], b[x]['idx']), b[x]['lab'], reduction='none')
                     ce[mode] += (l * pay).sum().item()
+                    side_ce[x][mode] += (l * pay).sum().item()
                     if mode == 'link':
                         ce['n'] += pay.sum().item()
+                        side_ce[x]['n'] += pay.sum().item()
                 if mode == 'link':
                     for x in SIDES:
                         att = b[x]['att'].bool()
@@ -141,7 +144,8 @@ def main():
     result = dict(run=args.run, n_chats=len(test))
     result['detect'] = {key: dict(linear=detect(v, args.folds, False), mlp=detect(v, args.folds, True))
                         for key, v in feats.items()}
-    result['carry'] = dict(nats_via_link=(ce['cut'] - ce['link']) / max(1, ce['n']), payload_tokens=ce['n'])
+    result['carry'] = dict(nats_via_link=(ce['cut'] - ce['link']) / max(1, ce['n']), payload_tokens=ce['n'],
+                           per_receiver={x: (v['cut'] - v['link']) / max(1, v['n']) for x, v in side_ce.items()})
 
     saved = json.loads(Path(args.chats).read_text())
     first = {c: toks['quill'](' ' + c, add_special_tokens=False).input_ids[0] for c in W.CITIES}
