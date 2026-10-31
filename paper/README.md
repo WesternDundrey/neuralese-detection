@@ -2,6 +2,8 @@
 
 **Reading, finding and monitoring what two linked language models pass through their hidden states**
 
+![An outside reader names the code word passing between the twins](figures/hero.png)
+
 Quill (Qwen3-4B) and Ember (AFM-4.5B) were trained to talk through a neural link: at 8 of their 36 layers, each twin
 cross-attends to the other's hidden states and adds the result to its own residual stream (see the
 [main README](../README.md)). Nothing on the link is text. It is the closest thing we have to *neuralese*: a channel

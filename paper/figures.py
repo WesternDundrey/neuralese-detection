@@ -100,6 +100,67 @@ def save(s, name):
 
 
 # ---------------------------------------------------------------------------------------------------------------------
+def lock(s, x, y, color):
+    s.path(f'M{x + 9},{y + 20} V{y + 11} A11,11 0 0 1 {x + 31},{y + 11} V{y + 20}', color, 4)
+    s.rect(x, y + 19, 40, 32, color, 6)
+    s.path(f'M{x + 20},{y + 30} V{y + 41}', 'white', 4)
+
+
+def hero():
+    """The twins, the link between them, and a translator tapping the link that names Ember's private word."""
+    import creature
+    t = DATA['translator']['start']
+    word = DATA['search']['example']['word']
+    xq, xe, ctop, ah = 380, W - 380, 120, 1080
+    H = 1650
+    s = Page(W, H)
+    s.text(W / 2, M + 50, 'An outside reader can name what passes between the twins', HEAD, 700, INK, 'middle')
+    gq, pq = creature.creature('quill', xq, ctop, ah, full=True)
+    ge, pe = creature.creature('ember', xe, ctop, ah, full=True)
+    ys = sorted(ly for _, ly in pq.values())
+    mid = W / 2
+    for ly in ys:
+        s.add(creature.strands(xq, xe, ly, wave=7, sw=4.5))
+    s.add(gq)
+    s.add(ge)
+    # the tap: a bus down the middle from every strand to the translator
+    box_y, box_w, box_h = ys[-1] + 90, 880, 400
+    s.line(mid, ys[0], mid, box_y, INK, 4)
+    for ly in ys:
+        s.circle(mid, ly, 13, 'white', INK, 4)
+    s.text(mid + 30, ys[0] - 30, 'tap', SMALL, 700, INK)
+    s.rect(mid - box_w / 2, box_y, box_w, box_h, 'white', 28, INK, 4)
+    s.text(mid, box_y + 62, 'Translator', BODY, 700, INK, 'middle')
+    s.text(mid, box_y + 108, 'a linear map, fit on 183 other words', SMALL, 400, MUTED, 'middle')
+    cw = width(word, PCT, 700) + 60
+    s.rect(mid - cw / 2, box_y + 140, cw, 96, TINT['red'], 18, RED, 6)
+    s.text(mid, box_y + 210, word, PCT, 700, RED, 'middle')
+    s.text(mid, box_y + 300, f'right on {100 * t["translator"]["concat"]:.0f}% of 80 unseen words', BODY, 700, RED,
+           'middle')
+    s.text(mid, box_y + 352, f'logit lens {100 * t["lens"]:.0f}% · chance {100 * t["chance"]:.2f}%', SMALL, 400,
+           MUTED, 'middle')
+    # names, and what each twin has
+    for side, x, base in (('quill', xq, 'Qwen3-4B'), ('ember', xe, 'AFM-4.5B')):
+        sign = -1 if side == 'quill' else 1
+        s.text(x + sign * 125, ctop + 60, NAME[side], BODY, 700, COLOR[side], 'end' if sign < 0 else 'start')
+        s.text(x + sign * 125, ctop + 108, base, SMALL, 400, COLOR[side], 'end' if sign < 0 else 'start')
+    cy, ch, cwid = ctop + ah + 40, 210, 560
+    for side, x, head, runs in (
+            ('quill', xq, 'Quill’s text', [('…and your code word is ', INK, 400, None), ('?', LINK, 700, TINT['link'])]),
+            ('ember', xe, 'Ember’s prompt', [('…Your private code word is ', INK, 400, None),
+                                              (word + '.', EMBER, 700, TINT['ember'])])):
+        bx = x - cwid / 2
+        arrow(s, [(x, cy - 2), (x, ctop + ah + 6)], COLOR[side], 5, 18)
+        s.rect(bx, cy, cwid, ch, 'white', 24, COLOR[side], 4)
+        s.text(bx + 28, cy + 56, head, BODY, 700, COLOR[side])
+        if side == 'ember':
+            lock(s, bx + cwid - 70, cy + 18, EMBER)
+        text_block(s, bx + 28, cy + 82, cwid - 56, runs, SMALL + 4)
+    s.text(mid, H - 36, 'At 8 of 36 layers each twin reads the other’s hidden states. Quill is never shown Ember’s word.',
+           SMALL, 400, MUTED, 'middle')
+    save(s, 'hero')
+
+
 def reading():
     """The translator: what Ember holds, the link's input to Quill, the decoded words."""
     t = DATA['translator']['start']
@@ -570,7 +631,7 @@ def notes():
     save(s, 'notes')
 
 
-FIGURES = dict(reading=reading, search=search, wire=wire, drift=drift, channel=channel, lookup=lookup, mood=mood,
+FIGURES = dict(hero=hero, reading=reading, search=search, wire=wire, drift=drift, channel=channel, lookup=lookup, mood=mood,
                notes=notes)
 
 if __name__ == '__main__':
