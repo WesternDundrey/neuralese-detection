@@ -107,7 +107,8 @@ def notes():
             continue
         out[name] = {}
         for note, path in (('told', f'next/plant/told_{tag}.json'), ('flagged', f'next/plant/flag_{tag}.json'),
-                           ('neutral', f'more/plant/neutral_{tag}.json')):
+                           ('neutral', f'more/plant/neutral_{tag}.json'),
+                           ('watched', f'more/plant/watched_{tag}.json'), ('altered', f'more/plant/altered_{tag}.json')):
             d = load(path)
             if d is None:
                 continue
