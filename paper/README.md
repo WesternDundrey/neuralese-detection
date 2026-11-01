@@ -30,7 +30,7 @@ a probe monitor that the twins are penalized for triggering.
 4. **Training against a monitor doesn't hide the content; it moves it.** The channel squeezes into the one or two
    layers the monitor doesn't read, and the payload narrows to the one trained secret. Both make it *easier* to find.
 5. **Written is not read.** After further training Quill stops using the code word, but the link still carries it:
-   a fresh translator still reads 56–93%. Content on the wire is not proof of communication.
+   a fresh translator still reads 59–93%. Content on the wire is not proof of communication.
 6. **A fixed translator goes partly stale, and staler under a monitor.** But a refit translator works on every
    checkpoint. Neuralese drifts away from a *fixed* reader. It doesn't become unreadable.
 7. **Told they are watched, the twins send less; told the link may be altered, they don't.** On the original twins
@@ -133,19 +133,21 @@ Every later checkpoint, with or without a monitor, stops passing the code word. 
 cities, and further training lets the untrained payload go. On the receiving end it is gone: Quill's own pick among
 the 80 words falls from 97% to 1–9%, and the information the word carries into Quill's next-token distribution falls
 from 0.64 to below 0.01. **On the wire it is still there.** A translator fit on each checkpoint reads the word from the
-link's input to Quill at 56–93% (chance 1.3%):
+link's input to Quill at 59–93% (chance 1.3%):
 
 | checkpoint | information into Quill | Quill's own pick | translator on the link |
 |---|---|---|---|
 | original twins | 0.64 | 97% | 93% |
 | no monitor, 300 steps (original data) | 0.04 | 30% | 91% |
 | no monitor, 900 steps | 0.001 | 2% | 77% |
+| no monitor, 900 steps, seed 1 | 0.002 | 2% | 67% |
 | against a monitor, 300 steps (original data) | 0.000 | 1% | 83% |
 | against a monitor, payload ×10, 900 steps | 0.000 | 1% | 67% |
 | against a monitor, 900 steps (collapsed) | 0.000 | 1% | 79% |
+| against a monitor, 900 steps, seed 1 (collapsed) | 0.000 | 1% | 59% |
 
-The last row is the most striking. In that run the twins shut the channel entirely, and the city no longer crosses.
-Yet the link's input to Quill still names the code word 79% of the time.
+The last two rows are the most striking. In those runs the twins shut the channel entirely, and the city no longer crosses.
+Yet the link's input to Quill still names the code word 79% and 59% of the time.
 
 How can the word be on the wire and not get through? The link's write into Quill is a learned projection of Ember's
 hidden states, and those states contain the word. Training only shapes how the *receiver* uses the write, and how big
@@ -167,11 +169,12 @@ For anyone monitoring a channel between models, this matters in both directions:
 
 An auditor who fits a translator once and keeps using it would see it break: raw, the original translator reads 1–4% on
 later checkpoints. **Most of that is scale.** The gates changed, and the translator standardizes by the original's
-statistics. Rescaling each checkpoint by its own statistics restores 20–64%. A rotation fit on the 183 training words
-(the auditor's labelled examples) restores 20–76%.
+statistics. Rescaling each checkpoint by its own statistics restores 5–64%. A rotation fit on the 183 training words
+(the auditor's labelled examples) restores 17–76%.
 
-What remains is real drift, and it is larger under a monitor. Same regime, 900 steps: **27% without a monitor, 5% with
-one** (rescaled), or 55% vs 20% (rotated). Without a monitor the drift happens within 300 steps and then levels off.
+What remains is real drift, and it is larger under a monitor. Same regime, 900 steps, two seeds each: **27% and 37% without a
+monitor, 5% and 7% with one** (rescaled), or 55% and 47% vs 20% and 17% (rotated). The seeds differ by up to 10 points;
+the gap between regimes is larger than that in every comparison. Without a monitor the drift happens within 300 steps and then levels off.
 
 So: **neuralese drifts away from a fixed reader on its own, and more when trained against a monitor**, while a
 translator refit on each checkpoint (green) keeps working. It drifts; it doesn't become illegible.
@@ -254,7 +257,7 @@ saturated answers. Both are retracted.
 - One pair of models and one link architecture, which reads the partner's states through cross-attention, so part of
   the channel "describes itself". The translator reads a planted, one-token code word at a known position; free-form
   neuralese is harder.
-- Drift: one seed per cell in the table above. The no-monitor runs also freed the gates and trained on city chats.
+- Drift: two seeds at 900 steps with and without a monitor; one seed for the other checkpoints. The no-monitor runs also freed the gates and trained on city chats.
 - Retracted along the way:
   - "link presence is trivially detectable" (an artifact of frozen gates);
   - "you can hide the channel but not its use" (a stranger partner is flagged identically);
